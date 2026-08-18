@@ -1,7 +1,7 @@
 "use client";
 
 import { Bell, Search, Sparkles } from "lucide-react";
-
+import { ThemeToggle } from "./theme-toggle";
 export function Topbar() {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6">
@@ -33,6 +33,7 @@ export function Topbar() {
 
       {/* Actions */}
       <div className="flex items-center gap-1">
+        <ThemeToggle />
         <button
           type="button"
           className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
