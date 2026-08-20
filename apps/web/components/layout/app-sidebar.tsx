@@ -80,27 +80,25 @@ const secondaryNavigation = [
   },
 ];
 
-export function AppSidebar() {
-  const [open, setOpen] = useState(false);
+interface AppSidebarProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export function AppSidebar({
+  open,
+  onOpenChange,
+}: AppSidebarProps) {
 
   return (
     <>
-      {/* Mobile menu button */}
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="fixed left-4 top-4 z-40 rounded-lg border bg-background p-2 shadow-sm lg:hidden"
-        aria-label="Open navigation"
-      >
-        <Menu className="size-5" />
-      </button>
 
       {/* Mobile overlay */}
       {open && (
         <button
           type="button"
           className="fixed inset-0 z-40 bg-black/40 lg:hidden"
-          onClick={() => setOpen(false)}
+          onClick={() => onOpenChange(false)}
           aria-label="Close navigation"
         />
       )}
@@ -128,7 +126,7 @@ export function AppSidebar() {
 
           <button
             type="button"
-            onClick={() => setOpen(false)}
+            onClick={() => onOpenChange(false)}
             className="rounded-md p-2 hover:bg-muted lg:hidden"
             aria-label="Close navigation"
           >
@@ -150,7 +148,7 @@ export function AppSidebar() {
                 <a
                   key={item.href}
                   href={item.href}
-                  onClick={() => setOpen(false)}
+                  onClick={() => onOpenChange(false)}
                   className={`
                     flex items-center gap-3 rounded-lg px-3 py-2.5
                     text-sm font-medium
@@ -179,7 +177,7 @@ export function AppSidebar() {
                 <a
                   key={item.href}
                   href={item.href}
-                  onClick={() => setOpen(false)}
+                  onClick={() => onOpenChange(false)}
                   className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
                   <Icon className="size-4" />
