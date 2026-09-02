@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from app.api.routes.users import router as users_router
 from app.core.config import settings
 
 
@@ -7,6 +8,12 @@ app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
     description="AI-powered personal operating system",
+)
+
+
+app.include_router(
+    users_router,
+    prefix="/api",
 )
 
 
