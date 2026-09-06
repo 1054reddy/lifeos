@@ -21,7 +21,6 @@ import {
   type TaskStatus,
 } from "@/lib/api";
 
-const USER_ID = "9a461d8e-18fd-4454-9223-d45248a157fc";
 
 const statusConfig = {
   todo: {
@@ -70,7 +69,7 @@ export default function TasksPage() {
       setLoading(true);
       setError(null);
 
-      const data = await getUserTasks(USER_ID);
+      const data = await getUserTasks();
       setTasks(data);
     } catch (err) {
       setError(
@@ -97,7 +96,6 @@ export default function TasksPage() {
       setError(null);
 
       await createTask({
-        user_id: USER_ID,
         title: title.trim(),
         description: description.trim() || null,
         status,

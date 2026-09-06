@@ -16,6 +16,7 @@ def test_create_user() -> None:
         json={
             "email": email,
             "name": "Test User",
+            "password": "TestPassword123!",
         },
     )
 
@@ -37,6 +38,7 @@ def test_duplicate_email_returns_409() -> None:
         json={
             "email": email,
             "name": "First User",
+            "password": "TestPassword123!",
         },
     )
 
@@ -47,6 +49,7 @@ def test_duplicate_email_returns_409() -> None:
         json={
             "email": email,
             "name": "Second User",
+            "password": "TestPassword123!",
         },
     )
 
@@ -62,6 +65,7 @@ def test_invalid_user_payload_returns_422() -> None:
         json={
             "email": "",
             "name": "",
+            "password": "TestPassword123!",
         },
     )
 
@@ -76,6 +80,7 @@ def test_get_user() -> None:
         json={
             "email": email,
             "name": "Get User",
+            "password": "TestPassword123!",
         },
     )
 

@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.security.auth import get_current_user
 from app.db.session import get_db
 from app.models import Task, User
 from app.schemas.task import TaskCreate, TaskResponse, TaskUpdate
@@ -22,18 +23,11 @@ router = APIRouter(
 )
 def create_task(
     task_data: TaskCreate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> TaskResponse:
-    user = db.get(User, task_data.user_id)
-
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found.",
-        )
-
     task = Task(
-        user_id=task_data.user_id,
+        user_id=current_user.id,
         title=task_data.title,
         description=task_data.description,
         status=task_data.status,
@@ -49,14 +43,37 @@ def create_task(
 
 
 @router.get(
+    "/user",
+    response_model=list[TaskResponse],
+)
+def get_user_tasks(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[TaskResponse]:
+    tasks = db.scalars(
+        select(Task)
+        .where(Task.user_id == current_user.id)
+        .order_by(Task.created_at.desc())
+    ).all()
+
+    return list(tasks)
+
+
+@router.get(
     "/{task_id}",
     response_model=TaskResponse,
 )
 def get_task(
     task_id: UUID,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> TaskResponse:
-    task = db.get(Task, task_id)
+    task = db.scalar(
+        select(Task).where(
+            Task.id == task_id,
+            Task.user_id == current_user.id,
+        )
+    )
 
     if task is None:
         raise HTTPException(
@@ -67,31 +84,6 @@ def get_task(
     return task
 
 
-@router.get(
-    "/user/{user_id}",
-    response_model=list[TaskResponse],
-)
-def get_user_tasks(
-    user_id: UUID,
-    db: Session = Depends(get_db),
-) -> list[TaskResponse]:
-    user = db.get(User, user_id)
-
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found.",
-        )
-
-    tasks = db.scalars(
-        select(Task)
-        .where(Task.user_id == user_id)
-        .order_by(Task.created_at.desc())
-    ).all()
-
-    return list(tasks)
-
-
 @router.patch(
     "/{task_id}",
     response_model=TaskResponse,
@@ -99,9 +91,15 @@ def get_user_tasks(
 def update_task(
     task_id: UUID,
     task_data: TaskUpdate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> TaskResponse:
-    task = db.get(Task, task_id)
+    task = db.scalar(
+        select(Task).where(
+            Task.id == task_id,
+            Task.user_id == current_user.id,
+        )
+    )
 
     if task is None:
         raise HTTPException(
@@ -126,9 +124,15 @@ def update_task(
 )
 def delete_task(
     task_id: UUID,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> None:
-    task = db.get(Task, task_id)
+    task = db.scalar(
+        select(Task).where(
+            Task.id == task_id,
+            Task.user_id == current_user.id,
+        )
+    )
 
     if task is None:
         raise HTTPException(

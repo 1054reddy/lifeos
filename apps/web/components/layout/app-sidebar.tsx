@@ -17,7 +17,9 @@ import {
   X,
 } from "lucide-react";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { clearAccessToken, getCurrentUser } from "@/lib/api";
 
 const navigation = [
   {
@@ -89,6 +91,31 @@ export function AppSidebar({
   open,
   onOpenChange,
 }: AppSidebarProps) {
+  const router = useRouter();
+
+  const [userName, setUserName] = useState("Loading...");
+  const [userEmail, setUserEmail] = useState("");
+
+  useEffect(() => {
+    async function loadCurrentUser() {
+      try {
+        const user = await getCurrentUser();
+
+        setUserName(user.name);
+        setUserEmail(user.email);
+      } catch {
+        // apiRequest handles 401 → login redirect.
+      }
+    }
+
+    loadCurrentUser();
+  }, []);
+
+  function handleLogout() {
+    clearAccessToken();
+    onOpenChange(false);
+    router.replace("/login");
+  }
 
   return (
     <>
@@ -192,18 +219,24 @@ export function AppSidebar({
         <div className="border-t p-3">
           <div className="flex items-center gap-3 rounded-lg p-2">
             <div className="flex size-9 items-center justify-center rounded-full bg-muted text-sm font-medium">
-              RR
+              {userName
+                .split(" ")
+                .map((part) => part[0])
+                .join("")
+                .slice(0, 2)
+                .toUpperCase()}
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">Raja Reddy</p>
+              <p className="truncate text-sm font-medium">{userName}</p>
               <p className="truncate text-xs text-muted-foreground">
-                Personal workspace
+                {userEmail}
               </p>
             </div>
 
             <button
               type="button"
+              onClick={handleLogout}
               className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
               aria-label="Log out"
             >

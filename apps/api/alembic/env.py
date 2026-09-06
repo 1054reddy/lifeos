@@ -5,7 +5,7 @@ from sqlalchemy import pool
 
 from alembic import context
 
-from app.core.settings import settings
+from app.core.config import settings
 from app.db.base import Base
 from app.models import Task, User  # noqa: F401
 

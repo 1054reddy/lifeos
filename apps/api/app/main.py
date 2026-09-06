@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.routes.auth import router as auth_router
 from app.api.routes.tasks import router as tasks_router
 from app.api.routes.users import router as users_router
 from app.core.config import settings
@@ -35,6 +36,10 @@ app.include_router(
     prefix="/api",
 )
 
+app.include_router(
+    auth_router,
+    prefix="/api",
+)
 
 @app.get("/")
 async def root() -> dict[str, str]:

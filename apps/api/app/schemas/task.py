@@ -5,11 +5,10 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class TaskCreate(BaseModel):
-    user_id: UUID
     title: str = Field(min_length=1, max_length=200)
     description: str | None = None
-    status: str = Field(default="todo", max_length=20)
-    priority: str = Field(default="medium", max_length=20)
+    status: str = "todo"
+    priority: str = "medium"
     due_at: datetime | None = None
 
 
