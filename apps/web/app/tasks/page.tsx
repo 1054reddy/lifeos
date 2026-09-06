@@ -48,6 +48,11 @@ export default function TasksPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<TaskStatus | "all">("all");
+  const [priorityFilter, setPriorityFilter] =
+    useState<TaskPriority | "all">("all");
+
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [creating, setCreating] = useState(false);
 
@@ -85,6 +90,23 @@ export default function TasksPage() {
   useEffect(() => {
     loadTasks();
   }, []);
+
+  const filteredTasks = tasks.filter((task) => {
+    const normalizedSearch = searchQuery.trim().toLowerCase();
+
+    const matchesSearch =
+      !normalizedSearch ||
+      task.title.toLowerCase().includes(normalizedSearch) ||
+      task.description?.toLowerCase().includes(normalizedSearch);
+
+    const matchesStatus =
+      statusFilter === "all" || task.status === statusFilter;
+
+    const matchesPriority =
+      priorityFilter === "all" || task.priority === priorityFilter;
+
+    return matchesSearch && matchesStatus && matchesPriority;
+  });
 
   async function handleCreateTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -242,6 +264,77 @@ export default function TasksPage() {
           </button>
         </div>
 
+        {!loading && tasks.length > 0 && (
+          <div className="mb-6 rounded-xl border bg-card p-4">
+            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px_180px]">
+              <div>
+                <label
+                  htmlFor="task-search"
+                  className="sr-only"
+                >
+                  Search tasks
+                </label>
+                <input
+                  id="task-search"
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search tasks..."
+                  className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="task-status-filter"
+                  className="sr-only"
+                >
+                  Filter by status
+                </label>
+                <select
+                  id="task-status-filter"
+                  value={statusFilter}
+                  onChange={(event) =>
+                    setStatusFilter(
+                      event.target.value as TaskStatus | "all",
+                    )
+                  }
+                  className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+                >
+                  <option value="all">All statuses</option>
+                  <option value="todo">To do</option>
+                  <option value="in_progress">In progress</option>
+                  <option value="done">Done</option>
+                </select>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="task-priority-filter"
+                  className="sr-only"
+                >
+                  Filter by priority
+                </label>
+                <select
+                  id="task-priority-filter"
+                  value={priorityFilter}
+                  onChange={(event) =>
+                    setPriorityFilter(
+                      event.target.value as TaskPriority | "all",
+                    )
+                  }
+                  className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+                >
+                  <option value="all">All priorities</option>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+
         {showCreateForm && (
           <form
             onSubmit={handleCreateTask}
@@ -383,9 +476,18 @@ export default function TasksPage() {
           </div>
         )}
 
-        {!loading && tasks.length > 0 && (
+        {!loading && tasks.length > 0 && filteredTasks.length === 0 && (
+          <div className="rounded-xl border bg-card p-8 text-center">
+            <p className="font-medium">No matching tasks</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Try adjusting your search or filters.
+            </p>
+          </div>
+        )}
+
+        {!loading && filteredTasks.length > 0 && (
           <div className="space-y-3">
-            {tasks.map((task) => {
+            {filteredTasks.map((task) => {
               const config =
                 statusConfig[task.status as keyof typeof statusConfig] ??
                 statusConfig.todo;
@@ -569,7 +671,15 @@ export default function TasksPage() {
 
                               <button
                                 type="button"
-                                onClick={() => handleDeleteTask(task.id)}
+                                onClick={() => {
+                                  if (
+                                    window.confirm(
+                                      "Are you sure you want to delete this task?",
+                                    )
+                                  ) {
+                                    handleDeleteTask(task.id);
+                                  }
+                                }}
                                 className="text-xs font-medium text-destructive transition-opacity hover:opacity-80"
                               >
                                 Delete
