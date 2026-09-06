@@ -3,20 +3,22 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.task_enums import TaskPriority, TaskStatus
+
 
 class TaskCreate(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     description: str | None = None
-    status: str = "todo"
-    priority: str = "medium"
+    status: TaskStatus = TaskStatus.TODO
+    priority: TaskPriority = TaskPriority.MEDIUM
     due_at: datetime | None = None
 
 
 class TaskUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = None
-    status: str | None = Field(default=None, max_length=20)
-    priority: str | None = Field(default=None, max_length=20)
+    status: TaskStatus | None = None
+    priority: TaskPriority | None = None
     due_at: datetime | None = None
 
 
@@ -27,8 +29,8 @@ class TaskResponse(BaseModel):
     user_id: UUID
     title: str
     description: str | None
-    status: str
-    priority: str
+    status: TaskStatus
+    priority: TaskPriority
     due_at: datetime | None
     created_at: datetime
     updated_at: datetime

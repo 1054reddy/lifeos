@@ -58,11 +58,13 @@ export default function TasksPage() {
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [status, setStatus] = useState<TaskStatus>("todo");
+  const [dueAt, setDueAt] = useState("");
 
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editPriority, setEditPriority] =
     useState<TaskPriority>("medium");
+  const [editDueAt, setEditDueAt] = useState("");
 
   async function loadTasks() {
     try {
@@ -100,12 +102,14 @@ export default function TasksPage() {
         description: description.trim() || null,
         status,
         priority,
+        due_at: dueAt ? new Date(dueAt).toISOString() : null,
       });
 
       setTitle("");
       setDescription("");
       setPriority("medium");
       setStatus("todo");
+      setDueAt("");
       setShowCreateForm(false);
 
       await loadTasks();
@@ -122,6 +126,17 @@ export default function TasksPage() {
     setEditTitle(task.title);
     setEditDescription(task.description ?? "");
     setEditPriority(task.priority as TaskPriority);
+    setEditDueAt(
+      task.due_at
+        ? (() => {
+            const date = new Date(task.due_at);
+            const offset = date.getTimezoneOffset() * 60000;
+            return new Date(date.getTime() - offset)
+              .toISOString()
+              .slice(0, 16);
+          })()
+        : "",
+    );
   }
   async function handleStatusChange(
     task: Task,
@@ -173,6 +188,9 @@ export default function TasksPage() {
         title: editTitle.trim(),
         description: editDescription.trim() || null,
         priority: editPriority,
+        due_at: editDueAt
+          ? new Date(editDueAt).toISOString()
+          : null,
       });
 
       setTasks((currentTasks) =>
@@ -265,7 +283,7 @@ export default function TasksPage() {
                 />
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-3">
                 <div>
                   <label
                     htmlFor="task-priority"
@@ -306,6 +324,22 @@ export default function TasksPage() {
                     <option value="in_progress">In progress</option>
                     <option value="done">Done</option>
                   </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="task-due-at"
+                    className="mb-2 block text-sm font-medium"
+                  >
+                    Due Date
+                  </label>
+                  <input
+                    id="task-due-at"
+                    type="datetime-local"
+                    value={dueAt}
+                    onChange={(event) => setDueAt(event.target.value)}
+                    className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+                  />
                 </div>
               </div>
 
@@ -417,25 +451,45 @@ export default function TasksPage() {
                             />
                           </div>
 
-                          <div>
-                            <label
-                              htmlFor={`edit-priority-${task.id}`}
-                              className="mb-2 block text-sm font-medium"
-                            >
-                              Priority
-                            </label>
-                            <select
-                              id={`edit-priority-${task.id}`}
-                              value={editPriority}
-                              onChange={(event) =>
-                                setEditPriority(event.target.value as TaskPriority)
-                              }
-                              className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-                            >
-                              <option value="low">Low</option>
-                              <option value="medium">Medium</option>
-                              <option value="high">High</option>
-                            </select>
+                          <div className="grid gap-4 sm:grid-cols-2">
+                            <div>
+                              <label
+                                htmlFor={`edit-priority-${task.id}`}
+                                className="mb-2 block text-sm font-medium"
+                              >
+                                Priority
+                              </label>
+                              <select
+                                id={`edit-priority-${task.id}`}
+                                value={editPriority}
+                                onChange={(event) =>
+                                  setEditPriority(event.target.value as TaskPriority)
+                                }
+                                className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+                              >
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label
+                                htmlFor={`edit-due-at-${task.id}`}
+                                className="mb-2 block text-sm font-medium"
+                              >
+                                Due Date
+                              </label>
+                              <input
+                                id={`edit-due-at-${task.id}`}
+                                type="datetime-local"
+                                value={editDueAt}
+                                onChange={(event) =>
+                                  setEditDueAt(event.target.value)
+                                }
+                                className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+                              />
+                            </div>
                           </div>
 
                           <div className="flex justify-end gap-2">
@@ -483,8 +537,20 @@ export default function TasksPage() {
                           </div>
 
                           <div className="mt-4 flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                               <span>{config.label}</span>
+
+                              {task.due_at && (
+                                <>
+                                  <span>•</span>
+                                  <span className="inline-flex items-center gap-1">
+                                    <Clock3 className="h-3.5 w-3.5" />
+                                    Due{" "}
+                                    {new Date(task.due_at).toLocaleString()}
+                                  </span>
+                                </>
+                              )}
+
                               <span>•</span>
                               <span>
                                 Updated{" "}

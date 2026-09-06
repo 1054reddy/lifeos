@@ -233,3 +233,59 @@ def test_delete_task() -> None:
 
     assert get_response.status_code == 404
     assert get_response.json()["detail"] == "Task not found."
+
+
+def test_create_task_rejects_invalid_status() -> None:
+    _, access_token = create_test_user()
+
+    response = client.post(
+        "/api/tasks",
+        headers=auth_headers(access_token),
+        json={
+            "title": "Invalid Status Task",
+            "status": "invalid_status",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_create_task_rejects_invalid_priority() -> None:
+    _, access_token = create_test_user()
+
+    response = client.post(
+        "/api/tasks",
+        headers=auth_headers(access_token),
+        json={
+            "title": "Invalid Priority Task",
+            "priority": "urgent",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_update_task_rejects_invalid_status() -> None:
+    _, access_token = create_test_user()
+
+    create_response = client.post(
+        "/api/tasks",
+        headers=auth_headers(access_token),
+        json={
+            "title": "Update Validation Task",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    task_id = create_response.json()["id"]
+
+    response = client.patch(
+        f"/api/tasks/{task_id}",
+        headers=auth_headers(access_token),
+        json={
+            "status": "invalid_status",
+        },
+    )
+
+    assert response.status_code == 422
