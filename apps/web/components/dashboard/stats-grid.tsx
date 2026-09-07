@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import {
   CheckCircle2,
   Clock3,
@@ -5,13 +8,9 @@ import {
   Wallet,
 } from "lucide-react";
 
-const stats = [
-  {
-    title: "Tasks",
-    value: "5",
-    description: "2 due today",
-    icon: CheckCircle2,
-  },
+import { getUserTasks, type Task } from "@/lib/api";
+
+const staticStats = [
   {
     title: "Habits",
     value: "4 / 5",
@@ -33,6 +32,61 @@ const stats = [
 ];
 
 export function StatsGrid() {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadTasks() {
+      try {
+        const data = await getUserTasks();
+        setTasks(data);
+      } catch {
+        setTasks([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadTasks();
+  }, []);
+
+  const completedTasks = tasks.filter(
+    (task) => task.status === "done",
+  ).length;
+
+  const today = new Date();
+  const startOfToday = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+  );
+  const startOfTomorrow = new Date(startOfToday);
+  startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+
+  const dueToday = tasks.filter((task) => {
+    if (!task.due_at) {
+      return false;
+    }
+
+    const dueDate = new Date(task.due_at);
+
+    return (
+      dueDate >= startOfToday &&
+      dueDate < startOfTomorrow
+    );
+  }).length;
+
+  const taskStats = {
+    title: "Tasks",
+    value: loading ? "—" : String(tasks.length),
+    description: loading
+      ? "Loading..."
+      : `${completedTasks} completed • ${dueToday} due today`,
+    icon: CheckCircle2,
+  };
+
+  const stats = [taskStats, ...staticStats];
+
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {stats.map((stat) => {
