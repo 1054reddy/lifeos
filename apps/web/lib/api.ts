@@ -34,6 +34,52 @@ export type UpdateTaskInput = {
   due_at?: string | null;
 };
 
+export type HabitFrequency = "daily" | "weekly";
+
+export type Habit = {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  frequency: HabitFrequency;
+  target_per_week: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type HabitCompletion = {
+  id: string;
+  habit_id: string;
+  completed_date: string;
+  created_at: string;
+};
+
+export type HabitProgress = {
+  habit_id: string;
+  today_completed: boolean;
+  completions_this_week: number;
+  target_per_week: number;
+  weekly_progress_percent: number;
+  current_streak: number;
+  longest_streak: number;
+};
+
+export type CreateHabitInput = {
+  name: string;
+  description?: string | null;
+  frequency?: HabitFrequency;
+  target_per_week?: number;
+};
+
+export type UpdateHabitInput = {
+  name?: string;
+  description?: string | null;
+  frequency?: HabitFrequency;
+  target_per_week?: number;
+  is_active?: boolean;
+};
+
 export function setAccessToken(token: string): void {
   localStorage.setItem(ACCESS_TOKEN_KEY, token);
 }
@@ -153,4 +199,64 @@ export async function deleteTask(taskId: string): Promise<void> {
   return apiRequest<void>(`/api/tasks/${taskId}`, {
     method: "DELETE",
   });
+}
+
+export async function getUserHabits(): Promise<Habit[]> {
+  return apiRequest<Habit[]>("/api/habits/user");
+}
+
+export async function getHabit(habitId: string): Promise<Habit> {
+  return apiRequest<Habit>(`/api/habits/${habitId}`);
+}
+
+export async function createHabit(
+  input: CreateHabitInput,
+): Promise<Habit> {
+  return apiRequest<Habit>("/api/habits", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateHabit(
+  habitId: string,
+  input: UpdateHabitInput,
+): Promise<Habit> {
+  return apiRequest<Habit>(`/api/habits/${habitId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteHabit(habitId: string): Promise<void> {
+  return apiRequest<void>(`/api/habits/${habitId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function completeHabit(
+  habitId: string,
+): Promise<HabitCompletion> {
+  return apiRequest<HabitCompletion>(
+    `/api/habits/${habitId}/complete`,
+    {
+      method: "POST",
+    },
+  );
+}
+
+export async function getHabitProgress(
+  habitId: string,
+): Promise<HabitProgress> {
+  return apiRequest<HabitProgress>(
+    `/api/habits/${habitId}/progress`,
+  );
+}
+
+export async function getHabitCompletions(
+  habitId: string,
+): Promise<HabitCompletion[]> {
+  return apiRequest<HabitCompletion[]>(
+    `/api/habits/${habitId}/completions`,
+  );
 }

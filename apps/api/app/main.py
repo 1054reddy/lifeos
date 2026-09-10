@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.routes.habits import router as habits_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.tasks import router as tasks_router
 from app.api.routes.users import router as users_router
@@ -38,6 +39,11 @@ app.include_router(
 
 app.include_router(
     auth_router,
+    prefix="/api",
+)
+
+app.include_router(
+    habits_router,
     prefix="/api",
 )
 
