@@ -80,6 +80,27 @@ export type UpdateHabitInput = {
   is_active?: boolean;
 };
 
+export type Note = {
+  id: string;
+  user_id: string;
+  title: string;
+  content: string;
+  is_pinned: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CreateNoteInput = {
+  title: string;
+  content?: string;
+};
+
+export type UpdateNoteInput = {
+  title?: string;
+  content?: string;
+  is_pinned?: boolean;
+};
+
 export function setAccessToken(token: string): void {
   localStorage.setItem(ACCESS_TOKEN_KEY, token);
 }
@@ -259,4 +280,37 @@ export async function getHabitCompletions(
   return apiRequest<HabitCompletion[]>(
     `/api/habits/${habitId}/completions`,
   );
+}
+
+export async function getUserNotes(): Promise<Note[]> {
+  return apiRequest<Note[]>("/api/notes/user");
+}
+
+export async function getNote(noteId: string): Promise<Note> {
+  return apiRequest<Note>(`/api/notes/${noteId}`);
+}
+
+export async function createNote(
+  input: CreateNoteInput,
+): Promise<Note> {
+  return apiRequest<Note>("/api/notes", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateNote(
+  noteId: string,
+  input: UpdateNoteInput,
+): Promise<Note> {
+  return apiRequest<Note>(`/api/notes/${noteId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteNote(noteId: string): Promise<void> {
+  return apiRequest<void>(`/api/notes/${noteId}`, {
+    method: "DELETE",
+  });
 }
