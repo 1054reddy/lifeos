@@ -4,6 +4,7 @@ import {
   BarChart3,
   CalendarDays,
   CheckSquare,
+  Clock3,
   FileText,
   FolderOpen,
   Home,
@@ -41,6 +42,11 @@ const navigation = [
     label: "Calendar",
     icon: CalendarDays,
     href: "/calendar",
+  },
+  {
+    label: "Planner",
+    icon: Clock3,
+    href: "/planner",
   },
   {
     label: "Habits",

@@ -101,6 +101,48 @@ export type UpdateNoteInput = {
   is_pinned?: boolean;
 };
 
+export type PlannerBlockType =
+  | "task"
+  | "focus"
+  | "break"
+  | "personal";
+
+export type PlannerBlock = {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string | null;
+  planned_date: string;
+  start_time: string;
+  end_time: string;
+  block_type: PlannerBlockType;
+  task_id: string | null;
+  is_completed: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CreatePlannerBlockInput = {
+  title: string;
+  description?: string | null;
+  planned_date: string;
+  start_time: string;
+  end_time: string;
+  block_type?: PlannerBlockType;
+  task_id?: string | null;
+};
+
+export type UpdatePlannerBlockInput = {
+  title?: string;
+  description?: string | null;
+  planned_date?: string;
+  start_time?: string;
+  end_time?: string;
+  block_type?: PlannerBlockType;
+  task_id?: string | null;
+  is_completed?: boolean;
+};
+
 export function setAccessToken(token: string): void {
   localStorage.setItem(ACCESS_TOKEN_KEY, token);
 }
@@ -313,4 +355,61 @@ export async function deleteNote(noteId: string): Promise<void> {
   return apiRequest<void>(`/api/notes/${noteId}`, {
     method: "DELETE",
   });
+}
+
+export async function getUserPlannerBlocks(
+  date: string,
+): Promise<PlannerBlock[]> {
+  return apiRequest<PlannerBlock[]>(
+    `/api/planner/user?date=${date}`,
+  );
+}
+
+export async function getPlannerBlock(
+  blockId: string,
+): Promise<PlannerBlock> {
+  return apiRequest<PlannerBlock>(
+    `/api/planner/${blockId}`,
+  );
+}
+
+export async function createPlannerBlock(
+  input: CreatePlannerBlockInput,
+): Promise<PlannerBlock> {
+  return apiRequest<PlannerBlock>("/api/planner", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updatePlannerBlock(
+  blockId: string,
+  input: UpdatePlannerBlockInput,
+): Promise<PlannerBlock> {
+  return apiRequest<PlannerBlock>(
+    `/api/planner/${blockId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export async function deletePlannerBlock(
+  blockId: string,
+): Promise<void> {
+  return apiRequest<void>(`/api/planner/${blockId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function completePlannerBlock(
+  blockId: string,
+): Promise<PlannerBlock> {
+  return apiRequest<PlannerBlock>(
+    `/api/planner/${blockId}/complete`,
+    {
+      method: "POST",
+    },
+  );
 }
