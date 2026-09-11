@@ -5,49 +5,69 @@ import {
   CheckCircle2,
   Clock3,
   TrendingDown,
+  Target,
   Wallet,
 } from "lucide-react";
 
-import { getUserTasks, type Task } from "@/lib/api";
+import {
+  getHabitProgress,
+  getUserHabits,
+  getUserTasks,
+  type Habit,
+  type HabitProgress,
+  type Task,
+} from "@/lib/api";
 
-const staticStats = [
-  {
-    title: "Habits",
-    value: "4 / 5",
-    description: "80% completed",
-    icon: Clock3,
-  },
-  {
-    title: "Focus Time",
-    value: "3h 42m",
-    description: "+18% this week",
-    icon: Clock3,
-  },
-  {
-    title: "Spending",
-    value: "₹420",
-    description: "12% below average",
-    icon: Wallet,
-  },
-];
+type HabitWithProgress = Habit & {
+  progress: HabitProgress | null;
+};
 
 export function StatsGrid() {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [habits, setHabits] = useState<HabitWithProgress[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadTasks() {
+    async function loadDashboardStats() {
       try {
-        const data = await getUserTasks();
-        setTasks(data);
+        const [taskData, habitData] = await Promise.all([
+          getUserTasks(),
+          getUserHabits(),
+        ]);
+
+        const activeHabits = habitData.filter(
+          (habit) => habit.is_active,
+        );
+
+        const habitsWithProgress = await Promise.all(
+          activeHabits.map(async (habit) => {
+            try {
+              const progress = await getHabitProgress(habit.id);
+
+              return {
+                ...habit,
+                progress,
+              };
+            } catch {
+              return {
+                ...habit,
+                progress: null,
+              };
+            }
+          }),
+        );
+
+        setTasks(taskData);
+        setHabits(habitsWithProgress);
       } catch {
         setTasks([]);
+        setHabits([]);
       } finally {
         setLoading(false);
       }
     }
 
-    loadTasks();
+    loadDashboardStats();
   }, []);
 
   const completedTasks = tasks.filter(
@@ -55,11 +75,13 @@ export function StatsGrid() {
   ).length;
 
   const today = new Date();
+
   const startOfToday = new Date(
     today.getFullYear(),
     today.getMonth(),
     today.getDate(),
   );
+
   const startOfTomorrow = new Date(startOfToday);
   startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
 
@@ -70,11 +92,29 @@ export function StatsGrid() {
 
     const dueDate = new Date(task.due_at);
 
-    return (
-      dueDate >= startOfToday &&
-      dueDate < startOfTomorrow
-    );
+    return dueDate >= startOfToday && dueDate < startOfTomorrow;
   }).length;
+
+  const completedHabits = habits.filter(
+    (habit) => habit.progress?.today_completed,
+  ).length;
+
+  const habitCount = habits.length;
+
+  const habitStats = {
+    title: "Habits",
+    value: loading
+      ? "—"
+      : `${completedHabits} / ${habitCount}`,
+    description: loading
+      ? "Loading..."
+      : habitCount === 0
+        ? "No active habits"
+        : `${Math.round(
+            (completedHabits / habitCount) * 100,
+          )}% completed today`,
+    icon: Target,
+  };
 
   const taskStats = {
     title: "Tasks",
@@ -85,7 +125,22 @@ export function StatsGrid() {
     icon: CheckCircle2,
   };
 
-  const stats = [taskStats, ...staticStats];
+  const staticStats = [
+    {
+      title: "Focus Time",
+      value: "3h 42m",
+      description: "+18% this week",
+      icon: Clock3,
+    },
+    {
+      title: "Spending",
+      value: "₹420",
+      description: "12% below average",
+      icon: Wallet,
+    },
+  ];
+
+  const stats = [taskStats, habitStats, ...staticStats];
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
