@@ -413,3 +413,41 @@ export async function completePlannerBlock(
     },
   );
 }
+
+export type AIChatResponse = {
+  conversation_id: string;
+  message_id: string;
+  role: string;
+  content: string;
+};
+
+export type Conversation = {
+  id: string;
+  user_id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Message = {
+  id: string;
+  conversation_id: string;
+  role: string;
+  content: string;
+  created_at: string;
+};
+
+export async function sendAIMessage(
+  message: string,
+  conversationId?: string,
+): Promise<AIChatResponse> {
+  return apiRequest<AIChatResponse>("/api/ai/chat", {
+    method: "POST",
+    body: JSON.stringify({
+      message,
+      ...(conversationId
+        ? { conversation_id: conversationId }
+        : {}),
+    }),
+  });
+}
