@@ -7,7 +7,17 @@ from alembic import context
 
 from app.core.config import settings
 from app.db.base import Base
-from app.models import Habit, HabitCompletion, Note, PlannerBlock, Task, User  # noqa: F401
+from app.models import (  # noqa: F401
+    Conversation,
+    Document,
+    Habit,
+    HabitCompletion,
+    Message,
+    Note,
+    PlannerBlock,
+    Task,
+    User,
+)
 
 
 config = context.config

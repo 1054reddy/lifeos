@@ -46,3 +46,6 @@ build/
 # Temporary
 tmp/
 temp/
+
+# LifeOS local document storage
+apps/api/storage/
