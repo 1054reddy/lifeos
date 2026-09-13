@@ -451,3 +451,15 @@ export async function sendAIMessage(
     }),
   });
 }
+
+export async function getConversations(): Promise<Conversation[]> {
+  return apiRequest<Conversation[]>("/api/ai/conversations");
+}
+
+export async function getConversationMessages(
+  conversationId: string,
+): Promise<Message[]> {
+  return apiRequest<Message[]>(
+    `/api/ai/conversations/${conversationId}/messages`,
+  );
+}
