@@ -1,24 +1,59 @@
 "use client";
 
-import { Bell, Menu, Search, Sparkles } from "lucide-react";
+import {
+  Bell,
+  Menu,
+  PanelLeft,
+  Search,
+  Sparkles,
+} from "lucide-react";
+
 import { ThemeToggle } from "./theme-toggle";
+
 interface TopbarProps {
   onMenuClick: () => void;
+  sidebarCollapsed: boolean;
+  onSidebarToggle: () => void;
 }
 
-export function Topbar({ onMenuClick }: TopbarProps) {
+export function Topbar({
+  onMenuClick,
+  sidebarCollapsed,
+  onSidebarToggle,
+}: TopbarProps) {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6">
       {/* Search */}
-      <div className="flex flex-1 items-center">
+      <div className="flex min-w-0 flex-1 items-center">
+        {/* Mobile menu */}
         <button
           type="button"
           onClick={onMenuClick}
-          className="mr-2 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:hidden"
+          className="mr-2 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:hidden"
           aria-label="Open navigation"
         >
           <Menu className="size-5" />
         </button>
+
+        {/* Tablet / desktop sidebar toggle */}
+        <button
+          type="button"
+          onClick={onSidebarToggle}
+          className="mr-2 hidden rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:flex"
+          aria-label={
+            sidebarCollapsed
+              ? "Expand navigation"
+              : "Collapse navigation"
+          }
+          title={
+            sidebarCollapsed
+              ? "Expand navigation"
+              : "Collapse navigation"
+          }
+        >
+          <PanelLeft className="size-5" />
+        </button>
+
         <button
           type="button"
           className="hidden w-full max-w-md items-center gap-3 rounded-lg border bg-muted/40 px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted sm:flex"
@@ -46,6 +81,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
       {/* Actions */}
       <div className="flex items-center gap-1">
         <ThemeToggle />
+
         <button
           type="button"
           className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"

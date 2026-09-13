@@ -11,17 +11,26 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
     <div className="min-h-screen bg-background">
       <div className="flex min-h-screen">
         <AppSidebar
           open={sidebarOpen}
+          collapsed={sidebarCollapsed}
           onOpenChange={setSidebarOpen}
+          onCollapsedChange={setSidebarCollapsed}
         />
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <Topbar onMenuClick={() => setSidebarOpen(true)} />
+          <Topbar
+            onMenuClick={() => setSidebarOpen(true)}
+            sidebarCollapsed={sidebarCollapsed}
+            onSidebarToggle={() =>
+              setSidebarCollapsed((current) => !current)
+            }
+          />
 
           <main className="flex-1">
             {children}

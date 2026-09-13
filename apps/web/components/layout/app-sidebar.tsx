@@ -9,9 +9,9 @@ import {
   FolderOpen,
   Home,
   LogOut,
-  Menu,
   MessageSquare,
   NotebookPen,
+  PanelLeft,
   Settings,
   Target,
   Wallet,
@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { clearAccessToken, getCurrentUser } from "@/lib/api";
 
 const navigation = [
@@ -90,14 +90,19 @@ const secondaryNavigation = [
 
 interface AppSidebarProps {
   open: boolean;
+  collapsed: boolean;
   onOpenChange: (open: boolean) => void;
+  onCollapsedChange: (collapsed: boolean) => void;
 }
 
 export function AppSidebar({
   open,
+  collapsed,
   onOpenChange,
+  onCollapsedChange,
 }: AppSidebarProps) {
   const router = useRouter();
+  const pathname = usePathname();
 
   const [userName, setUserName] = useState("Loading...");
   const [userEmail, setUserEmail] = useState("");
@@ -114,7 +119,7 @@ export function AppSidebar({
       }
     }
 
-    loadCurrentUser();
+    void loadCurrentUser();
   }, []);
 
   function handleLogout() {
@@ -123,14 +128,17 @@ export function AppSidebar({
     router.replace("/login");
   }
 
+  function handleNavigation() {
+    onOpenChange(false);
+  }
+
   return (
     <>
-
       {/* Mobile overlay */}
       {open && (
         <button
           type="button"
-          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/40 md:hidden"
           onClick={() => onOpenChange(false)}
           aria-label="Close navigation"
         />
@@ -138,29 +146,46 @@ export function AppSidebar({
 
       <aside
         className={`
-          fixed inset-y-0 left-0 z-50 flex w-64 flex-col
+          fixed inset-y-0 left-0 z-50 flex flex-col
           border-r bg-background
-          transition-transform duration-200
-          lg:static lg:translate-x-0
+          transition-[width,transform] duration-200
+          md:static md:translate-x-0
+          ${collapsed ? "md:w-16" : "md:w-64"}
+          w-64
           ${open ? "translate-x-0" : "-translate-x-full"}
         `}
       >
         {/* Brand */}
-        <div className="flex h-16 items-center justify-between border-b px-5">
-          <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-foreground text-background">
+        <div
+          className={`
+            flex h-16 shrink-0 items-center border-b
+            ${collapsed ? "justify-center px-2" : "justify-between px-5"}
+          `}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              router.push("/");
+              handleNavigation();
+            }}
+            className="flex items-center gap-2 rounded-lg"
+            aria-label="Go to dashboard"
+          >
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-foreground text-background">
               <span className="text-sm font-bold">L</span>
             </div>
 
-            <span className="text-lg font-semibold tracking-tight">
-              LifeOS
-            </span>
-          </div>
+            {!collapsed && (
+              <span className="text-lg font-semibold tracking-tight">
+                LifeOS
+              </span>
+            )}
+          </button>
 
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="rounded-md p-2 hover:bg-muted lg:hidden"
+            className="rounded-md p-2 hover:bg-muted md:hidden"
             aria-label="Close navigation"
           >
             <X className="size-5" />
@@ -168,53 +193,87 @@ export function AppSidebar({
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto px-3 py-5">
-          <p className="mb-2 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Workspace
-          </p>
+        <nav className="flex-1 overflow-y-auto px-2 py-5">
+          {!collapsed && (
+            <p className="mb-2 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Workspace
+            </p>
+          )}
 
           <div className="space-y-1">
             {navigation.map((item) => {
               const Icon = item.icon;
+              const isActive =
+                pathname === item.href ||
+                (item.href !== "/" &&
+                  pathname.startsWith(`${item.href}/`));
 
               return (
                 <a
                   key={item.href}
                   href={item.href}
-                  onClick={() => onOpenChange(false)}
+                  onClick={handleNavigation}
                   className={`
-                    flex items-center gap-3 rounded-lg px-3 py-2.5
-                    text-sm font-medium
-                    text-muted-foreground
+                    flex items-center rounded-lg
+                    py-2.5 text-sm font-medium
                     transition-colors
-                    hover:bg-muted hover:text-foreground
-                    ${item.href === "/" ? "bg-muted text-foreground" : ""}
+                    ${
+                      collapsed
+                        ? "justify-center px-2"
+                        : "gap-3 px-3"
+                    }
+                    ${
+                      isActive
+                        ? "bg-muted text-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }
                   `}
+                  title={collapsed ? item.label : undefined}
                 >
-                  <Icon className="size-4" />
-                  <span>{item.label}</span>
+                  <Icon className="size-4 shrink-0" />
+                  {!collapsed && <span>{item.label}</span>}
                 </a>
               );
             })}
           </div>
 
-          <p className="mb-2 mt-8 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Insights
-          </p>
+          {!collapsed && (
+            <p className="mb-2 mt-8 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Insights
+            </p>
+          )}
 
-          <div className="space-y-1">
+          <div className="mt-1 space-y-1">
             {secondaryNavigation.map((item) => {
               const Icon = item.icon;
+              const isActive =
+                pathname === item.href ||
+                pathname.startsWith(`${item.href}/`);
 
               return (
                 <a
                   key={item.href}
                   href={item.href}
-                  onClick={() => onOpenChange(false)}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  onClick={handleNavigation}
+                  className={`
+                    flex items-center rounded-lg
+                    py-2.5 text-sm font-medium
+                    transition-colors
+                    ${
+                      collapsed
+                        ? "justify-center px-2"
+                        : "gap-3 px-3"
+                    }
+                    ${
+                      isActive
+                        ? "bg-muted text-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }
+                  `}
+                  title={collapsed ? item.label : undefined}
                 >
-                  <Icon className="size-4" />
-                  <span>{item.label}</span>
+                  <Icon className="size-4 shrink-0" />
+                  {!collapsed && <span>{item.label}</span>}
                 </a>
               );
             })}
@@ -222,33 +281,84 @@ export function AppSidebar({
         </nav>
 
         {/* User section */}
-        <div className="border-t p-3">
-          <div className="flex items-center gap-3 rounded-lg p-2">
-            <div className="flex size-9 items-center justify-center rounded-full bg-muted text-sm font-medium">
-              {userName
-                .split(" ")
-                .map((part) => part[0])
-                .join("")
-                .slice(0, 2)
-                .toUpperCase()}
-            </div>
+        <div className="shrink-0 border-t p-2">
+          {collapsed ? (
+            <div className="flex flex-col items-center gap-1">
+              <button
+                type="button"
+                onClick={() => router.push("/settings")}
+                className="flex size-10 items-center justify-center rounded-lg bg-muted text-sm font-medium hover:bg-muted/80"
+                title={`${userName} · Settings`}
+                aria-label={`${userName} · Settings`}
+              >
+                {userName
+                  .split(" ")
+                  .map((part) => part[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase()}
+              </button>
 
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{userName}</p>
-              <p className="truncate text-xs text-muted-foreground">
-                {userEmail}
-              </p>
-            </div>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                aria-label="Log out"
+                title="Log out"
+              >
+                <LogOut className="size-4" />
+              </button>
 
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-              aria-label="Log out"
-            >
-              <LogOut className="size-4" />
-            </button>
-          </div>
+              <button
+                type="button"
+                onClick={() => onCollapsedChange(false)}
+                className="mt-1 flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                aria-label="Expand navigation"
+                title="Expand navigation"
+              >
+                <PanelLeft className="size-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 rounded-lg p-2">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium">
+                {userName
+                  .split(" ")
+                  .map((part) => part[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase()}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">
+                  {userName}
+                </p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {userEmail}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+                aria-label="Log out"
+              >
+                <LogOut className="size-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onCollapsedChange(true)}
+                className="hidden rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground md:block"
+                aria-label="Collapse navigation"
+                title="Collapse navigation"
+              >
+                <PanelLeft className="size-4" />
+              </button>
+            </div>
+          )}
         </div>
       </aside>
     </>
