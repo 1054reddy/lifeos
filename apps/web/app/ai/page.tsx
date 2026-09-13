@@ -8,6 +8,7 @@ import {
   Send,
   Sparkles,
   User,
+  X,
 } from "lucide-react";
 import {
   FormEvent,
@@ -54,6 +55,9 @@ export default function AIPage() {
     useState(true);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [isConversationDrawerOpen, setIsConversationDrawerOpen] =
+    useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -137,6 +141,7 @@ export default function AIPage() {
     setMessages(starterMessages);
     setInput("");
     setError(null);
+    setIsConversationDrawerOpen(false);
 
     textareaRef.current?.focus();
   }
@@ -205,7 +210,7 @@ export default function AIPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] min-h-0">
+    <div className="relative flex h-[calc(100vh-4rem)] min-h-0">
       {/* Conversation Sidebar */}
       <aside className="hidden w-72 shrink-0 border-r md:flex md:flex-col">
         <div className="flex items-center justify-between border-b px-4 py-4">
@@ -287,6 +292,104 @@ export default function AIPage() {
         </div>
       </aside>
 
+      {/* Mobile Conversation Drawer */}
+      {isConversationDrawerOpen && (
+        <div className="absolute inset-0 z-40 flex md:hidden">
+          {/* Backdrop */}
+          <button
+            type="button"
+            onClick={() => setIsConversationDrawerOpen(false)}
+            className="absolute inset-0 bg-black/30"
+            aria-label="Close conversation history"
+          />
+
+          {/* Drawer */}
+          <aside className="relative z-10 flex h-full w-[min(20rem,85vw)] shrink-0 flex-col border-r bg-background shadow-xl">
+            <div className="flex items-center justify-between border-b px-4 py-4">
+              <div>
+                <h2 className="text-sm font-semibold">
+                  Conversations
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Your AI chat history
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setIsConversationDrawerOpen(false)
+                }
+                className="flex size-8 items-center justify-center rounded-lg border bg-background transition-colors hover:bg-muted"
+                aria-label="Close conversations"
+                title="Close conversations"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto p-2">
+              {isLoadingConversations ? (
+                <div className="flex items-center justify-center gap-2 px-3 py-6 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" />
+                  Loading...
+                </div>
+              ) : conversations.length === 0 ? (
+                <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                  No conversations yet.
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {conversations.map((conversation) => {
+                    const isActive =
+                      conversation.id === activeConversationId;
+
+                    return (
+                      <button
+                        key={conversation.id}
+                        type="button"
+                        onClick={() => {
+                          if (!isLoading) {
+                            setActiveConversationId(
+                              conversation.id,
+                            );
+                            setIsConversationDrawerOpen(false);
+                          }
+                        }}
+                        disabled={isLoading}
+                        className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors ${
+                          isActive
+                            ? "bg-muted font-medium"
+                            : "hover:bg-muted/60"
+                        } disabled:cursor-not-allowed`}
+                      >
+                        <MessageSquare className="size-4 shrink-0 text-muted-foreground" />
+
+                        <span className="min-w-0 truncate">
+                          {conversation.title}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="border-t p-3">
+              <button
+                type="button"
+                onClick={handleNewChat}
+                disabled={isLoading}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Plus className="size-4" />
+                New Chat
+              </button>
+            </div>
+          </aside>
+        </div>
+      )}
+
       {/* Main Chat */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Header */}
@@ -310,17 +413,31 @@ export default function AIPage() {
               </p>
             </div>
 
-            {/* Mobile New Chat */}
-            <button
-              type="button"
-              onClick={handleNewChat}
-              disabled={isLoading}
-              className="ml-auto flex size-9 shrink-0 items-center justify-center rounded-lg border md:hidden"
-              aria-label="New chat"
-              title="New chat"
-            >
-              <Plus className="size-4" />
-            </button>
+            {/* Mobile Actions */}
+            <div className="ml-auto flex shrink-0 items-center gap-2 md:hidden">
+              <button
+                type="button"
+                onClick={() =>
+                  setIsConversationDrawerOpen(true)
+                }
+                className="flex size-9 items-center justify-center rounded-lg border transition-colors hover:bg-muted"
+                aria-label="Open conversation history"
+                title="Conversation history"
+              >
+                <MessageSquare className="size-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={handleNewChat}
+                disabled={isLoading}
+                className="flex size-9 items-center justify-center rounded-lg border transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label="New chat"
+                title="New chat"
+              >
+                <Plus className="size-4" />
+              </button>
+            </div>
           </div>
         </div>
 
