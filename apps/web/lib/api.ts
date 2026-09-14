@@ -143,6 +143,24 @@ export type UpdatePlannerBlockInput = {
   is_completed?: boolean;
 };
 
+export type Document = {
+  id: string;
+  user_id: string;
+  name: string;
+  original_filename: string;
+  file_type: string;
+  mime_type: string;
+  file_size: number;
+  storage_path: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type UpdateDocumentInput = {
+  name?: string;
+};
+
 export function setAccessToken(token: string): void {
   localStorage.setItem(ACCESS_TOKEN_KEY, token);
 }
@@ -462,4 +480,133 @@ export async function getConversationMessages(
   return apiRequest<Message[]>(
     `/api/ai/conversations/${conversationId}/messages`,
   );
+}
+
+export async function getUserDocuments(): Promise<Document[]> {
+  return apiRequest<Document[]>("/api/documents/user");
+}
+
+export async function uploadDocument(
+  file: File,
+): Promise<Document> {
+  const token = getAccessToken();
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/documents`,
+    {
+      method: "POST",
+      headers: {
+        ...(token
+          ? {
+              Authorization: `Bearer ${token}`,
+            }
+          : {}),
+      },
+      body: formData,
+    },
+  );
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => null);
+
+    if (
+      response.status === 401 &&
+      typeof window !== "undefined"
+    ) {
+      clearAccessToken();
+
+      if (window.location.pathname !== "/login") {
+        window.location.replace("/login");
+      }
+    }
+
+    const message =
+      errorBody?.detail ??
+      `Document upload failed with status ${response.status}`;
+
+    throw new Error(message);
+  }
+
+  return response.json();
+}
+
+export async function updateDocument(
+  documentId: string,
+  input: UpdateDocumentInput,
+): Promise<Document> {
+  return apiRequest<Document>(
+    `/api/documents/${documentId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export async function deleteDocument(
+  documentId: string,
+): Promise<void> {
+  return apiRequest<void>(
+    `/api/documents/${documentId}`,
+    {
+      method: "DELETE",
+    },
+  );
+}
+
+export function getDocumentFileUrl(
+  documentId: string,
+): string {
+  return `${API_BASE_URL}/api/documents/${documentId}/file`;
+}
+
+export async function openDocumentFile(
+  documentId: string,
+): Promise<void> {
+  const token = getAccessToken();
+
+  const response = await fetch(
+    getDocumentFileUrl(documentId),
+    {
+      headers: {
+        ...(token
+          ? {
+              Authorization: `Bearer ${token}`,
+            }
+          : {}),
+      },
+    },
+  );
+
+  if (!response.ok) {
+    if (
+      response.status === 401 &&
+      typeof window !== "undefined"
+    ) {
+      clearAccessToken();
+
+      if (window.location.pathname !== "/login") {
+        window.location.replace("/login");
+      }
+    }
+
+    const errorBody = await response.json().catch(() => null);
+
+    throw new Error(
+      errorBody?.detail ??
+        `Failed to open document with status ${response.status}`,
+    );
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+
+  window.open(url, "_blank");
+
+  window.setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 60_000);
 }

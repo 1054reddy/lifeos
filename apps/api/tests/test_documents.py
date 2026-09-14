@@ -235,6 +235,25 @@ def test_update_document() -> None:
     assert data["original_filename"] == "test.pdf"
 
 
+def test_update_document_rejects_wrong_extension() -> None:
+    _, access_token = create_test_user()
+
+    document = create_test_document(access_token)
+
+    response = client.patch(
+        f"/api/documents/{document['id']}",
+        headers=auth_headers(access_token),
+        json={
+            "name": "A3_230001054.txt",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == (
+        "Document name must use the .pdf extension."
+    )
+
+
 def test_delete_document() -> None:
     _, access_token = create_test_user()
 

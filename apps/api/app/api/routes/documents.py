@@ -1,3 +1,4 @@
+from pathlib import Path
 from uuid import UUID
 
 from fastapi import (
@@ -8,6 +9,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -19,6 +21,7 @@ from app.schemas.document import (
     DocumentUpdate,
 )
 from app.services.document_storage import (
+    STORAGE_ROOT,
     delete_document_file,
     save_document_file,
 )
@@ -116,6 +119,43 @@ def get_document(
     return document
 
 
+@router.get(
+    "/{document_id}/file",
+)
+def get_document_file(
+    document_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> FileResponse:
+    document = db.scalar(
+        select(Document).where(
+            Document.id == document_id,
+            Document.user_id == current_user.id,
+        )
+    )
+
+    if document is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found.",
+        )
+
+    file_path = STORAGE_ROOT / document.storage_path
+
+    if not file_path.is_file():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document file not found.",
+        )
+
+    return FileResponse(
+        path=file_path,
+        media_type=document.mime_type,
+        filename=document.name,
+        content_disposition_type="inline",
+    )
+
+
 @router.patch(
     "/{document_id}",
     response_model=DocumentResponse,
@@ -140,6 +180,29 @@ def update_document(
         )
 
     update_data = document_data.model_dump(exclude_unset=True)
+
+    if "name" in update_data:
+        new_name = update_data["name"].strip()
+
+        if not new_name:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Document name cannot be empty.",
+            )
+
+        if "." in new_name:
+            extension = new_name.rsplit(".", 1)[1].lower()
+
+            if extension != document.file_type.lower():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Document name must use the .{document.file_type} "
+                        "extension."
+                    ),
+                )
+
+        update_data["name"] = new_name
 
     for field, value in update_data.items():
         setattr(document, field, value)
