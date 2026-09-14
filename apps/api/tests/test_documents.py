@@ -1,15 +1,29 @@
 from uuid import uuid4
 
+from io import BytesIO
+from unittest.mock import patch
+
 from fastapi.testclient import TestClient
+from pypdf import PdfWriter
 
 from app.main import app
 from app.services.document_storage import STORAGE_ROOT
 
-
 client = TestClient(app)
 
 
-PDF_CONTENT = b"%PDF-1.4\nLifeOS test PDF\n%%EOF"
+def create_valid_pdf() -> bytes:
+    writer = PdfWriter()
+
+    writer.add_blank_page(
+        width=612,
+        height=792,
+    )
+
+    output = BytesIO()
+    writer.write(output)
+
+    return output.getvalue()
 
 
 def create_test_user() -> tuple[str, str]:
@@ -57,7 +71,7 @@ def create_test_document(access_token: str) -> dict:
         files={
             "file": (
                 "test.pdf",
-                PDF_CONTENT,
+                create_valid_pdf(),
                 "application/pdf",
             ),
         },
@@ -77,7 +91,7 @@ def test_create_document() -> None:
         files={
             "file": (
                 "example.pdf",
-                PDF_CONTENT,
+                create_valid_pdf(),
                 "application/pdf",
             ),
         },
@@ -92,7 +106,7 @@ def test_create_document() -> None:
     assert data["original_filename"] == "example.pdf"
     assert data["file_type"] == "pdf"
     assert data["mime_type"] == "application/pdf"
-    assert data["file_size"] == len(PDF_CONTENT)
+    assert data["file_size"] == len(create_valid_pdf())
     assert data["status"] == "uploaded"
 
     storage_path = data["storage_path"]
@@ -104,7 +118,7 @@ def test_create_document() -> None:
 
     assert stored_file.exists()
     assert stored_file.is_file()
-    assert stored_file.read_bytes() == PDF_CONTENT
+    assert stored_file.read_bytes() == create_valid_pdf()
 
 
 def test_create_document_without_auth_returns_401() -> None:
@@ -113,7 +127,7 @@ def test_create_document_without_auth_returns_401() -> None:
         files={
             "file": (
                 "example.pdf",
-                PDF_CONTENT,
+                create_valid_pdf(),
                 "application/pdf",
             ),
         },
@@ -153,7 +167,7 @@ def test_get_user_documents() -> None:
             files={
                 "file": (
                     filename,
-                    PDF_CONTENT,
+                    create_valid_pdf(),
                     "application/pdf",
                 ),
             },
@@ -291,3 +305,160 @@ def test_get_nonexistent_document() -> None:
     )
 
     assert response.status_code == 404
+
+
+def test_process_document() -> None:
+    _, access_token = create_test_user()
+
+    with patch(
+        "app.api.routes.documents.process_document_in_background",
+    ):
+        document = create_test_document(access_token)
+
+    def fake_process_document(document, db):
+        document.status = "ready"
+
+    with patch(
+        "app.api.routes.documents.process_document",
+        side_effect=fake_process_document,
+    ) as mock_process:
+        response = client.post(
+            f"/api/documents/{document['id']}/process",
+            headers=auth_headers(access_token),
+        )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["id"] == document["id"]
+    assert data["status"] == "ready"
+
+    mock_process.assert_called_once()
+
+
+
+def test_process_document_denies_other_user() -> None:
+    _, owner_token = create_test_user()
+    _, other_user_token = create_test_user()
+
+    document = create_test_document(owner_token)
+
+    with patch(
+        "app.api.routes.documents.process_document",
+    ) as mock_process:
+        response = client.post(
+            f"/api/documents/{document['id']}/process",
+            headers=auth_headers(other_user_token),
+        )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Document not found."
+
+    mock_process.assert_not_called()
+
+
+def test_process_document_returns_404_for_nonexistent_document() -> None:
+    _, access_token = create_test_user()
+
+    fake_document_id = "00000000-0000-0000-0000-000000000000"
+
+    with patch(
+        "app.api.routes.documents.process_document",
+    ) as mock_process:
+        response = client.post(
+            f"/api/documents/{fake_document_id}/process",
+            headers=auth_headers(access_token),
+        )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Document not found."
+
+    mock_process.assert_not_called()
+
+
+def test_process_document_rejects_ready_document() -> None:
+    _, access_token = create_test_user()
+
+    document = create_test_document(access_token)
+
+    from app.db.session import SessionLocal
+    from app.models import Document
+
+    with SessionLocal() as db:
+        db_document = db.get(
+            Document,
+            document["id"],
+        )
+
+        assert db_document is not None
+
+        db_document.status = "ready"
+        db.commit()
+
+    with patch(
+        "app.api.routes.documents.process_document",
+    ) as mock_process:
+        response = client.post(
+            f"/api/documents/{document['id']}/process",
+            headers=auth_headers(access_token),
+        )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == (
+        "Document has already been processed."
+    )
+
+    mock_process.assert_not_called()
+
+
+def test_process_document_returns_500_when_processing_fails() -> None:
+    _, access_token = create_test_user()
+
+    with patch(
+        "app.api.routes.documents.process_document_in_background",
+    ):
+        document = create_test_document(access_token)
+
+    with patch(
+        "app.api.routes.documents.process_document",
+        side_effect=ValueError("PDF extraction failed."),
+    ) as mock_process:
+        response = client.post(
+            f"/api/documents/{document['id']}/process",
+            headers=auth_headers(access_token),
+        )
+
+    assert response.status_code == 500
+
+    mock_process.assert_called_once()
+
+
+def test_process_document_extracts_real_pdf() -> None:
+    _, access_token = create_test_user()
+
+    pdf_content = create_valid_pdf()
+
+    with patch(
+        "app.api.routes.documents.process_document_in_background",
+    ) as mock_background:
+        upload_response = client.post(
+            "/api/documents",
+            headers=auth_headers(access_token),
+            files={
+                "file": (
+                    "real-test.pdf",
+                    pdf_content,
+                    "application/pdf",
+                ),
+            },
+        )
+
+    assert upload_response.status_code == 201
+
+    document = upload_response.json()
+
+    assert document["id"]
+    assert document["status"] == "uploaded"
+
+    mock_background.assert_called_once()

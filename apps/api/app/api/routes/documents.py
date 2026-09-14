@@ -3,6 +3,7 @@ from uuid import UUID
 
 from fastapi import (
     APIRouter,
+    BackgroundTasks,
     Depends,
     File,
     HTTPException,
@@ -20,6 +21,11 @@ from app.schemas.document import (
     DocumentResponse,
     DocumentUpdate,
 )
+from app.services.document_processing import (
+    process_document,
+    process_document_in_background,
+)
+
 from app.services.document_storage import (
     STORAGE_ROOT,
     delete_document_file,
@@ -44,6 +50,7 @@ ALLOWED_FILE_TYPES = {
     status_code=status.HTTP_201_CREATED,
 )
 async def create_document(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -73,6 +80,11 @@ async def create_document(
     db.add(document)
     db.commit()
     db.refresh(document)
+
+    background_tasks.add_task(
+        process_document_in_background,
+        document.id,
+    )
 
     return document
 
@@ -154,6 +166,54 @@ def get_document_file(
         filename=document.name,
         content_disposition_type="inline",
     )
+
+
+@router.post(
+    "/{document_id}/process",
+    response_model=DocumentResponse,
+)
+def process_document_endpoint(
+    document_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> DocumentResponse:
+    document = db.scalar(
+        select(Document).where(
+            Document.id == document_id,
+            Document.user_id == current_user.id,
+        )
+    )
+
+    if document is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found.",
+        )
+
+    if document.status == "processing":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Document is already being processed.",
+        )
+
+    if document.status == "ready":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Document has already been processed.",
+        )
+
+    try:
+        process_document(
+            document,
+            db,
+        )
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Document processing failed.",
+        ) from error
+
+    return document
 
 
 @router.patch(
